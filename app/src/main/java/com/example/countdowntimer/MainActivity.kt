@@ -18,6 +18,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,8 +64,12 @@ fun ShotClockApp() {
 }
 
 @Composable
-fun ShotClock() {
-    var timerValue by remember { mutableStateOf("24") } // Placeholder value
+fun ShotClock(shotClockViewModel: ShotClockViewModel = viewModel()) {
+    val timerValue by remember { derivedStateOf { shotClockViewModel.timerValue } }
+
+    LaunchedEffect(Unit) {
+        shotClockViewModel.startTimer()
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -67,7 +79,7 @@ fun ShotClock() {
             .padding(16.dp)
     ) {
         Text(
-            text = timerValue,
+            text = timerValue.toString(),
             fontSize = 48.sp,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -75,12 +87,16 @@ fun ShotClock() {
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Button(onClick = { /* Pause timer logic */ }) {
+            Button(onClick = { shotClockViewModel.pauseTimer() }) {
                 Text(text = "Pause")
             }
-            Button(onClick = { /* Reset timer logic */ }) {
+            Button(onClick = { shotClockViewModel.resetTimer() }) {
                 Text(text = "Reset")
             }
+        }
+        Spacer(modifier = Modifier.height(16.dp)) // Add some space between the rows
+        Button(onClick = { shotClockViewModel.startTimer() }) {
+            Text(text = "Play")
         }
     }
 }
@@ -112,8 +128,36 @@ fun ShowText() {
 }
 
 
-//@Preview(showBackground = true)
-//@Composable
-//fun ShotClockAppPreview() {
-//    ShotClockApp()
-//}
+class ShotClockViewModel : ViewModel() {
+    var timerValue by mutableStateOf(24)
+        private set
+
+    private var timerJob: Job? = null
+
+    fun startTimer() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (timerValue > 0) {
+                delay(1000L)
+                timerValue--
+            }
+        }
+    }
+
+    fun pauseTimer() {
+        timerJob?.cancel()
+    }
+
+    fun resetTimer() {
+        pauseTimer()
+        timerValue = 24
+    }
+}
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun ShotClockAppPreview() {
+    ShotClockApp()
+}
